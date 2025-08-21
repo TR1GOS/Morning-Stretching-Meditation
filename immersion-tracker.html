@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Immersion Tracker — Japanese × Spanish (Streak)</title>
+<style>
+  :root{
+    --bg0:#0b0d12;--bg1:#0f1117;--bg2:#0a0b0f;
+    --card: rgba(255,255,255,0.05);
+    --border: rgba(255,255,255,0.10);
+    --soft: rgba(255,255,255,0.06);
+    --text:#e5e7eb; --muted:#9ca3af; --ok:#34d399; --warn:#f59e0b; --bad:#ef4444;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:
+    radial-gradient(circle at 20% 0%, var(--bg1) 0%, var(--bg0) 40%, var(--bg2) 100%);
+    color:var(--text); font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+      Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji",
+      "Segoe UI Emoji";}
+  .container{max-width:1100px;margin:0 auto;padding:24px;display:grid;gap:24px}
+  .header{display:flex;gap:16px;align-items:flex-end;justify-content:space-between;
+    padding:16px 20px;border:1px solid var(--border);
+    border-radius:24px;background:rgba(0,0,0,0.25);backdrop-filter:saturate(140%) blur(6px);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);}
+  .muted{color:var(--muted);font-size:12px;letter-spacing:.12em;text-transform:uppercase}
+  .title{margin:4px 0 2px;font-size:24px;font-weight:700}
+  .sub{font-size:11px;color:var(--muted)}
+
+  .streak{display:flex;gap:8px;align-items:center;padding:8px 12px;border:1px solid var(--border);
+    border-radius:16px;background:rgba(0,0,0,0.25)}
+  .btn{padding:8px 12px;border-radius:12px;border:1px solid var(--border);
+    background:rgba(0,0,0,0.35);color:var(--text);cursor:pointer}
+  .btn:hover{background:rgba(255,255,255,0.06)}
+  .chip{padding:2px 8px;border-radius:999px;border:1px solid var(--border);font-size:12px}
+  .chip.ok{background:rgba(52,211,153,0.15);color:#a7f3d0}
+  .chip.wait{background:rgba(255,255,255,0.08);color:var(--text)}
+
+  .bar{height:2px;width:100%;border-radius:999px;
+    background: linear-gradient(90deg, rgba(255,255,255,0.1), rgba(255,255,255,0.06), transparent);}
+
+  .grid{display:grid;gap:16px}
+  .grid.cols-4{grid-template-columns:repeat(2,minmax(0,1fr))}
+  @media(min-width:900px){.grid.cols-4{grid-template-columns:repeat(4,minmax(0,1fr))}}
+
+  .card{border:1px solid var(--border);border-radius:18px;padding:16px;
+    background:rgba(255,255,255,0.04);backdrop-filter:saturate(140%) blur(6px)}
+  .card h2{margin:0 0 12px;font-size:18px}
+  .card .row{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+  .row .label{font-size:12px;color:var(--muted)}
+
+  .ring{width:112px;height:112px;border-radius:50%;display:grid;place-items:center;color:#fff}
+  .ring-inner{width:96px;height:96px;border-radius:50%;display:grid;place-items:center;
+    background:rgba(10,11,15,0.8);border:1px solid rgba(255,255,255,0.10)}
+  .ring-pct{font-size:18px;font-weight:700}
+  .ring-sub{font-size:11px;color:var(--muted)}
+
+  .section{display:grid;gap:16px}
+  @media(min-width:900px){.section{grid-template-columns:1fr 1fr}}
+  .col{display:grid;gap:12px}
+
+  .toggle{display:flex;align-items:center;gap:10px;cursor:pointer}
+  .toggle .track{width:48px;height:28px;border-radius:999px;padding:4px;transition:.2s}
+  .toggle .thumb{width:20px;height:20px;border-radius:50%;background:#fff;transition:.2s}
+  .toggle .on{background:#34d399}
+  .toggle .off{background:rgba(255,255,255,0.22)}
+
+  .num{display:flex;align-items:center;gap:8px}
+  .num input{width:90px;padding:8px 10px;border-radius:10px;border:1px solid var(--border);
+    background:rgba(0,0,0,0.35);color:var(--text)}
+  .num .btn{padding:6px 10px}
+
+  textarea{width:100%;min-height:100px;border-radius:12px;border:1px solid var(--border);
+    background:rgba(255,255,255,0.04);color:var(--text);padding:10px}
+  .footer{font-size:11px;color:var(--muted);text-align:center;padding-bottom:24px}
+
+  details summary{cursor:pointer;color:var(--muted)}
+  ul.tests{list-style:disc;padding-left:20px}
+  .pass{color:#a7f3d0}.fail{color:#fca5a5}
+</style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div>
+        <div class="muted">Immersion System</div>
+        <div class="title">Japanese × Spanish</div>
+        <div class="sub">Daily input, mining, and SRS — monochrome UI</div>
+      </div>
+      <div style="display:flex;gap:12px;align-items:center">
+        <div id="streakBox" class="streak">
+          <div style="font-size:18px">🔥</div>
+          <div style="line-height:1.1">
+            <div style="font-size:14px;font-weight:700">Streak <span id="streakDays">0</span>d</div>
+            <div class="sub">Best <span id="bestDays">0</span>d</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button class="btn" id="prevBtn">◀ Prev</button>
+          <div class="btn" id="dateLabel"></div>
+          <button class="btn" id="nextBtn">Next ▶</button>
+          <button class="btn" id="todayBtn">Today</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="bar"></div>
+
+    <div class="grid cols-4">
+      <div class="card">
+        <div class="row"><h2>Japanese – Time</h2><div class="label"><span id="jaTimeDone">0</span>/<span id="jaTimeGoal">0</span> min</div></div>
+        <div style="display:flex;justify-content:center">
+          <div class="ring" id="jaTimeRing"><div class="ring-inner"><div class="ring-pct" id="jaTimePct">0%</div><div class="ring-sub">Time</div></div></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="row"><h2>Japanese – Mining</h2><div class="label"><span id="jaMineDone">0</span>/<span id="jaMineGoal">0</span></div></div>
+        <div style="display:flex;justify-content:center">
+          <div class="ring" id="jaMineRing"><div class="ring-inner"><div class="ring-pct" id="jaMinePct">0%</div><div class="ring-sub">Mining</div></div></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="row"><h2>Spanish – Time</h2><div class="label"><span id="esTimeDone">0</span>/<span id="esTimeGoal">0</span> min</div></div>
+        <div style="display:flex;justify-content:center">
+          <div class="ring" id="esTimeRing"><div class="ring-inner"><div class="ring-pct" id="esTimePct">0%</div><div class="ring-sub">Time</div></div></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="row"><h2>Spanish – Mining</h2><div class="label"><span id="esMineDone">0</span>/<span id="esMineGoal">0</span></div></div>
+        <div style="display:flex;justify-content:center">
+          <div class="ring" id="esMineRing"><div class="ring-inner"><div class="ring-pct" id="esMinePct">0%</div><div class="ring-sub">Mining</div></div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="row">
+        <h2>Japanese</h2>
+        <div id="jaCoreChip" class="chip wait">In progress</div>
+      </div>
+      <div class="section">
+        <div class="col">
+          <label class="toggle"><div id="jaWaniTrack" class="track off"><div id="jaWaniThumb" class="thumb"></div></div><span>WaniKani reviews</span></label>
+          <label class="toggle"><div id="jaAnkiTrack" class="track off"><div id="jaAnkiThumb" class="thumb"></div></div><span>Anki reviews</span></label>
+          <div><div class="label">Watch minutes</div><div class="num"><button class="btn" data-delta="-5" data-target="ja.watch">−5</button><input id="jaWatch" type="number" min="0" value="0"/><span class="label">min</span><button class="btn" data-delta="5" data-target="ja.watch">+5</button></div></div>
+          <div><div class="label">Read minutes</div><div class="num"><button class="btn" data-delta="-5" data-target="ja.read">−5</button><input id="jaRead" type="number" min="0" value="0"/><span class="label">min</span><button class="btn" data-delta="5" data-target="ja.read">+5</button></div></div>
+          <div><div class="label">Sentence mining</div><div class="num"><button class="btn" data-delta="-1" data-target="ja.mine">−1</button><input id="jaMine" type="number" min="0" value="0"/><span class="label">items</span><button class="btn" data-delta="1" data-target="ja.mine">+1</button></div></div>
+        </div>
+        <div class="col">
+          <div class="label" style="margin-bottom:6px;font-weight:600;color:#d1d5db">Goals</div>
+          <div class="num"><span class="label" style="width:110px">Watch goal</span><input id="gJaWatch" type="number" min="0" value="30"/><span class="label">min</span></div>
+          <div class="num"><span class="label" style="width:110px">Read goal</span><input id="gJaRead" type="number" min="0" value="20"/><span class="label">min</span></div>
+          <div class="num"><span class="label" style="width:110px">Mining goal</span><input id="gJaMine" type="number" min="0" value="5"/><span class="label">items</span></div>
+          <div class="label" style="margin:6px 0">Include tasks</div>
+          <div class="toggle"><div id="gJaWaniTrack" class="track on"><div id="gJaWaniThumb" class="thumb" style="transform:translateX(20px)"></div></div><span>WaniKani</span></div>
+          <div class="toggle"><div id="gJaAnkiTrack" class="track on"><div id="gJaAnkiThumb" class="thumb" style="transform:translateX(20px)"></div></div><span>Anki</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="row">
+        <h2>Spanish</h2>
+        <div id="esCoreChip" class="chip wait">In progress</div>
+      </div>
+      <div class="section">
+        <div class="col">
+          <label class="toggle"><div id="esAnkiTrack" class="track off"><div id="esAnkiThumb" class="thumb"></div></div><span>Anki reviews</span></label>
+          <div><div class="label">Watch minutes</div><div class="num"><button class="btn" data-delta="-5" data-target="es.watch">−5</button><input id="esWatch" type="number" min="0" value="0"/><span class="label">min</span><button class="btn" data-delta="5" data-target="es.watch">+5</button></div></div>
+          <div><div class="label">Listen minutes</div><div class="num"><button class="btn" data-delta="-5" data-target="es.listen">−5</button><input id="esListen" type="number" min="0" value="0"/><span class="label">min</span><button class="btn" data-delta="5" data-target="es.listen">+5</button></div></div>
+          <div><div class="label">Read minutes</div><div class="num"><button class="btn" data-delta="-5" data-target="es.read">−5</button><input id="esRead" type="number" min="0" value="0"/><span class="label">min</span><button class="btn" data-delta="5" data-target="es.read">+5</button></div></div>
+          <div><div class="label">Mining</div><div class="num"><button class="btn" data-delta="-1" data-target="es.mine">−1</button><input id="esMine" type="number" min="0" value="0"/><span class="label">items</span><button class="btn" data-delta="1" data-target="es.mine">+1</button></div></div>
+        </div>
+        <div class="col">
+          <div class="label" style="margin-bottom:6px;font-weight:600;color:#d1d5db">Goals</div>
+          <div class="num"><span class="label" style="width:110px">Watch goal</span><input id="gEsWatch" type="number" min="0" value="30"/><span class="label">min</span></div>
+          <div class="num"><span class="label" style="width:110px">Listen goal</span><input id="gEsListen" type="number" min="0" value="20"/><span class="label">min</span></div>
+          <div class="num"><span class="label" style="width:110px">Read goal</span><input id="gEsRead" type="number" min="0" value="15"/><span class="label">min</span></div>
+          <div class="num"><span class="label" style="width:110px">Mining goal</span><input id="gEsMine" type="number" min="0" value="5"/><span class="label">items</span></div>
+          <div class="label" style="margin:6px 0">Include tasks</div>
+          <div class="toggle"><div id="gEsAnkiTrack" class="track off"><div id="gEsAnkiThumb" class="thumb"></div></div><span>Anki</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="row"><h2>Weekly</h2></div>
+      <div class="row" style="gap:12px;flex-wrap:wrap">
+        <div class="label">Week starting <span id="weekId">—</span></div>
+        <div class="toggle"><div id="weeklyVanessaTrack" class="track on"><div id="weeklyVanessaThumb" class="thumb" style="transform:translateX(20px)"></div></div><span>Spanish: Vanessa homework</span></div>
+        <button class="btn" id="resetWeek">Reset week</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="row"><h2>Notes / Reflection</h2></div>
+      <textarea id="notes" placeholder="Quick notes: what did you watch/read, good mined sentences, obstacles, comprehension level"></textarea>
+    </div>
+
+    <div class="card">
+      <div class="row"><h2>System</h2><div id="dailyChip" class="chip wait">Daily core not yet complete</div></div>
+      <div class="row" style="gap:8px;flex-wrap:wrap">
+        <button class="btn" id="resetToday">Reset today</button>
+        <button class="btn" id="exportJSON">Export JSON</button>
+        <label class="btn" for="importJSON" style="cursor:pointer">Import JSON</label>
+        <input id="importJSON" type="file" accept="application/json" style="display:none"/>
+        <button class="btn" id="resetAll">Reset all settings</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="row"><h2>Dev / Tests</h2></div>
+      <details>
+        <summary>Show tests</summary>
+        <ul id="tests" class="tests"></ul>
+      </details>
+    </div>
+
+    <div class="footer">Keep the flame alive: complete both language cores to extend your streak.</div>
+  </div>
+
+<script>
+(function(){
+  const STORAGE_KEY = "immersion-tracker-singlehtml-v1";
+
+  // ------- utils
+  function todayISO(d = new Date()){
+    const tz = d.getTimezoneOffset();
+    const local = new Date(d.getTime() - tz*60000);
+    return local.toISOString().slice(0,10);
+  }
+  function shiftISO(dateStr, deltaDays){
+    const d = new Date(dateStr + "T00:00:00");
+    d.setDate(d.getDate() + deltaDays);
+    return todayISO(d);
+  }
+  function startOfISOWeek(date=new Date()){
+    const d = new Date(date);
+    const day = (d.getDay() + 6) % 7;
+    d.setHours(0,0,0,0);
+    d.setDate(d.getDate()-day);
+    return d;
+  }
+  function weekId(date=new Date()){
+    const start = startOfISOWeek(date);
+    return start.toISOString().slice(0,10);
+  }
+  function clamp(n,min,max){return Math.max(min, Math.min(max,n));}
+
+  // ------- state
+  const defaultConfig = {
+    goals: {
+      ja: { watch: 30, read: 20, mine: 5, anki: true, wanikani: true },
+      es: { watch: 30, listen: 20, read: 15, mine: 5, anki: false },
+    },
+    weekly: { vanessaHomework: true },
+  };
+  function load(){
+    try{
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if(!raw) return { config: defaultConfig, entries:{}, weekly:{}, meta:{bestStreak:0} };
+      const parsed = JSON.parse(raw);
+      return {
+        config: Object.assign({}, defaultConfig, parsed.config||{}),
+        entries: parsed.entries||{},
+        weekly: parsed.weekly||{},
+        meta: parsed.meta || {bestStreak:0},
+      };
+    }catch(e){ return { config: defaultConfig, entries:{}, weekly:{}, meta:{bestStreak:0} };}
+  }
+  function save(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+
+  let state = load();
+  let date = todayISO();
+  function ensureEntry(){
+    if(!state.entries[date]){
+      state.entries[date] = { ja:{watch:0,read:0,mine:0,anki:false,wanikani:false},
+                              es:{watch:0,listen:0,read:0,mine:0,anki:false},
+                              notes:"" };
+    }
+    const wid = weekId(new Date(date));
+    state.weekly[wid] = state.weekly[wid] || { vanessa:false };
+  }
+  ensureEntry();
+
+  // ------- DOM refs
+  const $ = (s)=>document.querySelector(s);
+
+  const elDate = $("#dateLabel"), elPrev=$("#prevBtn"), elNext=$("#nextBtn"), elToday=$("#todayBtn");
+  const elWeekId = $("#weekId");
+
+  const r = (id)=>document.getElementById(id);
+
+  // rings
+  const ri = {
+    jaTimeRing: r("jaTimeRing"), jaTimePct: r("jaTimePct"), jaTimeDone: r("jaTimeDone"), jaTimeGoal: r("jaTimeGoal"),
+    jaMineRing: r("jaMineRing"), jaMinePct: r("jaMinePct"), jaMineDone: r("jaMineDone"), jaMineGoal: r("jaMineGoal"),
+    esTimeRing: r("esTimeRing"), esTimePct: r("esTimePct"), esTimeDone: r("esTimeDone"), esTimeGoal: r("esTimeGoal"),
+    esMineRing: r("esMineRing"), esMinePct: r("esMinePct"), esMineDone: r("esMineDone"), esMineGoal: r("esMineGoal"),
+  };
+
+  // inputs
+  const inp = {
+    jaWaniTrack: r("jaWaniTrack"), jaWaniThumb: r("jaWaniThumb"),
+    jaAnkiTrack: r("jaAnkiTrack"), jaAnkiThumb: r("jaAnkiThumb"),
+    jaWatch: r("jaWatch"), jaRead: r("jaRead"), jaMine: r("jaMine"),
+    gJaWatch: r("gJaWatch"), gJaRead: r("gJaRead"), gJaMine: r("gJaMine"),
+    gJaWaniTrack: r("gJaWaniTrack"), gJaWaniThumb: r("gJaWaniThumb"),
+    gJaAnkiTrack: r("gJaAnkiTrack"), gJaAnkiThumb: r("gJaAnkiThumb"),
+
+    esAnkiTrack: r("esAnkiTrack"), esAnkiThumb: r("esAnkiThumb"),
+    esWatch: r("esWatch"), esListen: r("esListen"), esRead: r("esRead"), esMine: r("esMine"),
+    gEsWatch: r("gEsWatch"), gEsListen: r("gEsListen"), gEsRead: r("gEsRead"), gEsMine: r("gEsMine"),
+    gEsAnkiTrack: r("gEsAnkiTrack"), gEsAnkiThumb: r("gEsAnkiThumb"),
+
+    weeklyVanessaTrack: r("weeklyVanessaTrack"), weeklyVanessaThumb: r("weeklyVanessaThumb"),
+    resetWeek: r("resetWeek"),
+    notes: r("notes"),
+  };
+
+  // core chips and daily
+  const jaCoreChip = r("jaCoreChip"), esCoreChip = r("esCoreChip"), dailyChip = r("dailyChip");
+  const streakDays = r("streakDays"), bestDays = r("bestDays"), streakBox = r("streakBox");
+
+  // system buttons
+  const resetToday = r("resetToday"), exportJSON = r("exportJSON"), importJSON = r("importJSON"), resetAll = r("resetAll");
+
+  // ------- logic
+  function isDayComplete(entry, goals){
+    const jaTimeGoal = (goals.ja.watch||0) + (goals.ja.read||0);
+    const jaTimeDone = (entry.ja.watch||0) + (entry.ja.read||0);
+    const esTimeGoal = (goals.es.watch||0) + (goals.es.listen||0) + (goals.es.read||0);
+    const esTimeDone = (entry.es.watch||0) + (entry.es.listen||0) + (entry.es.read||0);
+    const ja = (!goals.ja.wanikani || entry.ja.wanikani) && (!goals.ja.anki || entry.ja.anki) && jaTimeDone >= jaTimeGoal && (entry.ja.mine||0) >= (goals.ja.mine||0);
+    const es = (!goals.es.anki || entry.es.anki) && esTimeDone >= esTimeGoal && (entry.es.mine||0) >= (goals.es.mine||0);
+    return ja && es;
+  }
+  function computeStreak(entries, goals, endISO){
+    let streak = 0, cursor = endISO;
+    while(true){
+      const e = entries[cursor];
+      if(!e || !isDayComplete(e, goals)) break;
+      streak++; cursor = shiftISO(cursor, -1);
+    }
+    return streak;
+  }
+  function computeBestStreak(entries, goals){
+    const dates = Object.keys(entries).sort();
+    if(dates.length===0) return 0;
+    const set = new Set(dates);
+    let best = 0;
+    for(const d of dates){
+      const prev = shiftISO(d,-1);
+      if(set.has(prev)) continue;
+      let cur = d, len = 0;
+      while(set.has(cur) && isDayComplete(entries[cur], goals)){
+        len++; cur = shiftISO(cur,-1);
+      }
+      if(len>best) best = len;
+    }
+    return best;
+  }
+
+  function updateRings(){
+    const e = state.entries[date];
+    const g = state.config.goals;
+
+    const jaTimeGoal = (g.ja.watch||0)+(g.ja.read||0);
+    const jaTimeDone = (e.ja.watch||0)+(e.ja.read||0);
+    const esTimeGoal = (g.es.watch||0)+(g.es.listen||0)+(g.es.read||0);
+    const esTimeDone = (e.es.watch||0)+(e.es.listen||0)+(e.es.read||0);
+
+    // JA time
+    ri.jaTimeGoal.textContent = jaTimeGoal;
+    ri.jaTimeDone.textContent = jaTimeDone;
+    const jaTPct = jaTimeGoal>0 ? Math.min(100, Math.round(jaTimeDone/jaTimeGoal*100)) : 0;
+    ri.jaTimePct.textContent = jaTPct + "%";
+    ri.jaTimeRing.style.background = `conic-gradient(#fff ${jaTPct}%, ${'rgba(255,255,255,0.06)'} ${jaTPct}%)`;
+
+    // JA mining
+    ri.jaMineGoal.textContent = g.ja.mine||0;
+    ri.jaMineDone.textContent = e.ja.mine||0;
+    const jaMPct = (g.ja.mine||0)>0 ? Math.min(100, Math.round((e.ja.mine||0)/(g.ja.mine||0)*100)) : 0;
+    ri.jaMinePct.textContent = jaMPct + "%";
+    ri.jaMineRing.style.background = `conic-gradient(#fff ${jaMPct}%, ${'rgba(255,255,255,0.06)'} ${jaMPct}%)`;
+
+    // ES time
+    ri.esTimeGoal.textContent = esTimeGoal;
+    ri.esTimeDone.textContent = esTimeDone;
+    const esTPct = esTimeGoal>0 ? Math.min(100, Math.round(esTimeDone/esTimeGoal*100)) : 0;
+    ri.esTimePct.textContent = esTPct + "%";
+    ri.esTimeRing.style.background = `conic-gradient(#fff ${esTPct}%, ${'rgba(255,255,255,0.06)'} ${esTPct}%)`;
+
+    // ES mining
+    ri.esMineGoal.textContent = g.es.mine||0;
+    ri.esMineDone.textContent = e.es.mine||0;
+    const esMPct = (g.es.mine||0)>0 ? Math.min(100, Math.round((e.es.mine||0)/(g.es.mine||0)*100)) : 0;
+    ri.esMinePct.textContent = esMPct + "%";
+    ri.esMineRing.style.background = `conic-gradient(#fff ${esMPct}%, ${'rgba(255,255,255,0.06)'} ${esMPct}%)`;
+  }
+
+  function renderToggles(){
+    const e = state.entries[date], g = state.config.goals;
+    // Daily toggles
+    toggleSet(inp.jaWaniTrack, inp.jaWaniThumb, e.ja.wanikani);
+    toggleSet(inp.jaAnkiTrack, inp.jaAnkiThumb, e.ja.anki);
+    toggleSet(inp.esAnkiTrack, inp.esAnkiThumb, e.es.anki);
+    // Goals toggles
+    toggleSet(inp.gJaWaniTrack, inp.gJaWaniThumb, g.ja.wanikani);
+    toggleSet(inp.gJaAnkiTrack, inp.gJaAnkiThumb, g.ja.anki);
+    toggleSet(inp.gEsAnkiTrack, inp.gEsAnkiThumb, g.es.anki);
+    // Weekly
+    const wid = weekId(new Date(date));
+    const w = state.weekly[wid]||{vanessa:false};
+    toggleSet(inp.weeklyVanessaTrack, inp.weeklyVanessaThumb, w.vanessa);
+  }
+  function toggleSet(track, thumb, on){
+    if(on){ track.classList.remove('off'); track.classList.add('on'); thumb.style.transform='translateX(20px)'; }
+    else { track.classList.remove('on'); track.classList.add('off'); thumb.style.transform='translateX(0)'; }
+  }
+
+  function renderInputs(){
+    const e = state.entries[date], g = state.config.goals;
+    inp.jaWatch.value = e.ja.watch||0; inp.jaRead.value = e.ja.read||0; inp.jaMine.value = e.ja.mine||0;
+    inp.esWatch.value = e.es.watch||0; inp.esListen.value = e.es.listen||0; inp.esRead.value = e.es.read||0; inp.esMine.value = e.es.mine||0;
+    inp.gJaWatch.value = g.ja.watch||0; inp.gJaRead.value = g.ja.read||0; inp.gJaMine.value = g.ja.mine||0;
+    inp.gEsWatch.value = g.es.watch||0; inp.gEsListen.value = g.es.listen||0; inp.gEsRead.value = g.es.read||0; inp.gEsMine.value = g.es.mine||0;
+    inp.notes.value = e.notes||"";
+  }
+
+  function renderChips(){
+    const e = state.entries[date], g = state.config.goals;
+    const jaTimeGoal = (g.ja.watch||0)+(g.ja.read||0), jaTimeDone=(e.ja.watch||0)+(e.ja.read||0);
+    const esTimeGoal = (g.es.watch||0)+(g.es.listen||0)+(g.es.read||0), esTimeDone=(e.es.watch||0)+(e.es.listen||0)+(e.es.read||0);
+    const allCoreJA = (!g.ja.wanikani || e.ja.wanikani) && (!g.ja.anki || e.ja.anki) && jaTimeDone>=jaTimeGoal && (e.ja.mine||0)>=(g.ja.mine||0);
+    const allCoreES = (!g.es.anki || e.es.anki) && esTimeDone>=esTimeGoal && (e.es.mine||0)>=(g.es.mine||0);
+    jaCoreChip.textContent = allCoreJA ? "Core done" : "In progress";
+    esCoreChip.textContent = allCoreES ? "Core done" : "In progress";
+    jaCoreChip.className = "chip " + (allCoreJA ? "ok" : "wait");
+    esCoreChip.className = "chip " + (allCoreES ? "ok" : "wait");
+    const daily = allCoreJA && allCoreES;
+    dailyChip.textContent = daily ? "Daily core complete" : "Daily core not yet complete";
+    dailyChip.className = "chip " + (daily ? "ok" : "wait");
+    // streak box pulse
+    streakBox.style.animation = daily ? "pulse 1.2s ease-in-out infinite" : "none";
+  }
+
+  function renderDate(){
+    elDate.textContent = date;
+    elWeekId.textContent = weekId(new Date(date));
+  }
+
+  function renderStreaks(){
+    const cur = computeStreak(state.entries, state.config.goals, date);
+    const best = Math.max(state.meta.bestStreak||0, computeBestStreak(state.entries, state.config.goals));
+    if((state.meta.bestStreak||0) < best){ state.meta.bestStreak = best; save(); }
+    streakDays.textContent = cur;
+    bestDays.textContent = best;
+  }
+
+  function renderAll(){
+    ensureEntry();
+    renderDate();
+    renderInputs();
+    renderToggles();
+    updateRings();
+    renderChips();
+    renderStreaks();
+    save();
+  }
+
+  // ------- events
+  elPrev.onclick = ()=>{ date = shiftISO(date,-1); renderAll(); };
+  elNext.onclick = ()=>{ date = shiftISO(date, 1); renderAll(); };
+  elToday.onclick = ()=>{ date = todayISO(); renderAll(); };
+
+  document.querySelectorAll('.num .btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const delta = parseInt(btn.getAttribute('data-delta'),10)||0;
+      const target = btn.getAttribute('data-target'); // e.g., "ja.watch"
+      const [lang,key] = target.split('.');
+      const e = state.entries[date][lang];
+      e[key] = clamp((e[key]||0)+delta,0,600);
+      renderAll();
+    });
+  });
+
+  function attachToggle(track, thumb, accessor){
+    track.addEventListener('click', ()=>{
+      const val = accessor.get();
+      accessor.set(!val);
+      renderAll();
+    });
+  }
+
+  // daily toggles
+  attachToggle(inp.jaWaniTrack, inp.jaWaniThumb, { get:()=>state.entries[date].ja.wanikani, set:(v)=>state.entries[date].ja.wanikani=v });
+  attachToggle(inp.jaAnkiTrack, inp.jaAnkiThumb, { get:()=>state.entries[date].ja.anki, set:(v)=>state.entries[date].ja.anki=v });
+  attachToggle(inp.esAnkiTrack, inp.esAnkiThumb, { get:()=>state.entries[date].es.anki, set:(v)=>state.entries[date].es.anki=v });
+
+  // goal toggles
+  attachToggle(inp.gJaWaniTrack, inp.gJaWaniThumb, { get:()=>state.config.goals.ja.wanikani, set:(v)=>state.config.goals.ja.wanikani=v });
+  attachToggle(inp.gJaAnkiTrack, inp.gJaAnkiThumb, { get:()=>state.config.goals.ja.anki, set:(v)=>state.config.goals.ja.anki=v });
+  attachToggle(inp.gEsAnkiTrack, inp.gEsAnkiThumb, { get:()=>state.config.goals.es.anki, set:(v)=>state.config.goals.es.anki=v });
+
+  // numeric inputs -> state
+  function bindNumber(id, setter){
+    r(id).addEventListener('input', (e)=>{
+      const v = clamp(parseInt(e.target.value||"0",10),0,600);
+      setter(v); renderAll();
+    });
+  }
+
+  bindNumber('jaWatch', v=>state.entries[date].ja.watch=v);
+  bindNumber('jaRead',  v=>state.entries[date].ja.read=v);
+  bindNumber('jaMine',  v=>state.entries[date].ja.mine=v);
+
+  bindNumber('esWatch', v=>state.entries[date].es.watch=v);
+  bindNumber('esListen',v=>state.entries[date].es.listen=v);
+  bindNumber('esRead',  v=>state.entries[date].es.read=v);
+  bindNumber('esMine',  v=>state.entries[date].es.mine=v);
+
+  bindNumber('gJaWatch', v=>state.config.goals.ja.watch=v);
+  bindNumber('gJaRead',  v=>state.config.goals.ja.read=v);
+  bindNumber('gJaMine',  v=>state.config.goals.ja.mine=v);
+
+  bindNumber('gEsWatch', v=>state.config.goals.es.watch=v);
+  bindNumber('gEsListen',v=>state.config.goals.es.listen=v);
+  bindNumber('gEsRead',  v=>state.config.goals.es.read=v);
+  bindNumber('gEsMine',  v=>state.config.goals.es.mine=v);
+
+  // weekly
+  attachToggle(inp.weeklyVanessaTrack, inp.weeklyVanessaThumb, {
+    get:()=>{
+      const wid = weekId(new Date(date)); return (state.weekly[wid]||{vanessa:false}).vanessa;
+    },
+    set:(v)=>{
+      const wid = weekId(new Date(date));
+      state.weekly[wid] = state.weekly[wid] || {vanessa:false};
+      state.weekly[wid].vanessa = v;
+    }
+  });
+  inp.resetWeek.addEventListener('click', ()=>{
+    const wid = weekId(new Date(date));
+    if(state.weekly[wid]) state.weekly[wid].vanessa = false;
+    renderAll();
+  });
+
+  // notes
+  inp.notes.addEventListener('input', (e)=>{
+    state.entries[date].notes = e.target.value; save();
+  });
+
+  // system
+  resetToday.onclick = ()=>{
+    if(confirm("Reset today's entry?")){
+      state.entries[date] = { ja:{watch:0,read:0,mine:0,anki:false,wanikani:false},
+                              es:{watch:0,listen:0,read:0,mine:0,anki:false}, notes:\"\" };
+      renderAll();
+    }
+  };
+  exportJSON.onclick = ()=>{
+    const blob = new Blob([JSON.stringify(state,null,2)], {type:'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `immersion-tracker-${date}.json`; a.click();
+    URL.revokeObjectURL(url);
+  };
+  importJSON.onchange = (e)=>{
+    const file = e.target.files && e.target.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = ()=>{
+      try{
+        const data = JSON.parse(reader.result);
+        state = data; save(); renderAll();
+      }catch(_){}
+    };
+    reader.readAsText(file); e.target.value = "";
+  };
+  resetAll.onclick = ()=>{
+    if(confirm("Reset all settings?")){
+      state = { config: defaultConfig, entries:{}, weekly:{}, meta:{bestStreak:0} };
+      renderAll();
+    }
+  };
+
+  // tests
+  function runTests(){
+    const results = [];
+    const d = new Date("2025-08-20T12:34:56Z");
+    results.push({name:"todayISO length", got: todayISO(d).length, expected:10, pass: todayISO(d).length===10});
+    results.push({name:"shiftISO -1", got: shiftISO("2025-08-20",-1), expected:"2025-08-19", pass: shiftISO("2025-08-20",-1)==="2025-08-19"});
+    const w = weekId(new Date("2025-08-20T00:00:00Z"));
+    results.push({name:"weekId start Monday", got:w, expected:"2025-08-18", pass:w==="2025-08-18"});
+    const goals = { ja:{watch:30,read:20,mine:5,anki:true,wanikani:true}, es:{watch:30,listen:20,read:0,mine:5,anki:false} };
+    const ok = { ja:{watch:30,read:20,mine:5,anki:true,wanikani:true}, es:{watch:30,listen:20,read:0,mine:5,anki:false} };
+    const bad= { ja:{watch:30,read:20,mine:4,anki:true,wanikani:true}, es:{watch:30,listen:20,read:0,mine:5,anki:false} };
+    results.push({name:"isDayComplete true", got:isDayComplete(ok,goals), expected:true, pass:isDayComplete(ok,goals)===true});
+    results.push({name:"isDayComplete false(mining)", got:isDayComplete(bad,goals), expected:false, pass:isDayComplete(bad,goals)===false});
+    const entries = {"2025-08-18":{ja:ok.ja,es:ok.es}, "2025-08-19":{ja:ok.ja,es:ok.es}, "2025-08-20":{ja:{...ok.ja,mine:4},es:ok.es}};
+    results.push({name:"computeStreak 19th", got:computeStreak(entries,goals,"2025-08-19"), expected:2, pass:computeStreak(entries,goals,"2025-08-19")===2});
+    results.push({name:"computeStreak 20th", got:computeStreak(entries,goals,"2025-08-20"), expected:0, pass:computeStreak(entries,goals,"2025-08-20")===0});
+    results.push({name:"computeBestStreak gap", got:computeBestStreak(entries,goals), expected:2, pass:computeBestStreak(entries,goals)===2});
+    return results;
+  }
+
+  function renderTests(){
+    const ul = r("tests"); ul.innerHTML = "";
+    const res = runTests();
+    res.forEach(t=>{
+      const li = document.createElement('li');
+      li.className = t.pass ? 'pass' : 'fail';
+      li.textContent = `${t.name}: ${t.pass ? 'PASS' : `FAIL (got ${JSON.stringify(t.got)} expected ${JSON.stringify(t.expected)})`}`;
+      ul.appendChild(li);
+    });
+  }
+
+  // pulse animation (inline keyframes)
+  const style = document.createElement('style');
+  style.textContent = `@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(255,255,255,0.15)}70%{box-shadow:0 0 0 8px rgba(255,255,255,0)}100%{box-shadow:0 0 0 0 rgba(255,255,255,0)}}`;
+  document.head.appendChild(style);
+
+  // boot
+  renderAll();
+  renderTests();
+})();
+</script>
+</body>
+</html>
