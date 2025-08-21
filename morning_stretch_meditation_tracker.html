@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Morning Stretching + Meditation Tracker</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- React 18 UMD -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <!-- Babel Standalone to transpile JSX in-browser -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body class="min-h-screen bg-neutral-950">
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useEffect, useMemo, useRef, useState } = React;
+
+    // Morning Stretching + Meditation Tracker — Single-file HTML build (React via CDN)
+    // Monochrome aesthetic. LocalStorage persistence. Runs on GitHub Pages with no build tools.
+
+    const STORAGE_KEY = "msmt_tracker_v1";
+
+    // -------------------- Date utils (local-time safe) --------------------
+    const zero = (d) => {
+      const x = new Date(d);
+      x.setHours(0, 0, 0, 0);
+      return x;
+    };
+    const today = () => zero(new Date());
+    const fmtISO = (d) => {
+      const x = zero(d);
+      const tzOffset = x.getTimezoneOffset();
+      const local = new Date(x.getTime() - tzOffset * 60000);
+      return local.toISOString().slice(0, 10); // YYYY-MM-DD
+    };
+    const addDays = (d, delta) => zero(new Date(zero(d).getTime() + delta * 86400000));
+    const getWeekBoundaries = (d) => {
+      const x = zero(d);
+      const day = (x.getDay() + 6) % 7; // Mon=0
+      const mon = addDays(x, -day);
+      const sun = addDays(mon, 6);
+      return [mon, sun];
+    };
+    const daysInMonth = (d) => new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+    const getMonthBoundaries = (d) => [new Date(d.getFullYear(), d.getMonth(), 1), new Date(d.getFullYear(), d.getMonth(), daysInMonth(d))].map(zero);
+
+    // -------------------- Persistence --------------------
+    const defaultState = () => ({ days: {}, settings: { stretchMin: 10, medMin: 10 } });
+    const load = () => {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        const s = raw ? JSON.parse(raw) : defaultState();
+        if (!s.settings) s.settings = { stretchMin: 10, medMin: 10 };
+        if (!s.days) s.days = {};
+        return s;
+      } catch {
+        return defaultState();
+      }
+    };
+    const save = (s) => {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(s));
+      } catch {}
+    };
+
+    // -------------------- Small primitives --------------------
+    const Card = ({ title, subtitle, right, children }) => (
+      <div className="rounded-2xl border border-white/10 bg-neutral-900/50 backdrop-blur p-4 shadow-[0_0_0_1px_rgba(255,255,255,0.04)]">
+        <div className="mb-3 flex items-center justify-between gap-4">
+          <div>
+            {title && <h2 className="text-lg font-semibold tracking-wide text-white">{title}</h2>}
+            {subtitle && <div className="text-xs text-neutral-400">{subtitle}</div>}
+          </div>
+          {right}
+        </div>
+        {children}
+      </div>
+    );
+
+    const Toggle = ({ checked, onChange, label }) => (
+      <label className="flex cursor-pointer select-none items-center gap-3">
+        <span onClick={() => onChange(!checked)} className={`h-7 w-12 rounded-full p-1 transition-colors ${checked ? "bg-emerald-500" : "bg-neutral-700/70"}`}>
+          <span className={`block h-5 w-5 rounded-full bg-white transition-transform ${checked ? "translate-x-5" : "translate-x-0"}`}></span>
+        </span>
+        <span className="text-sm text-neutral-200">{label}</span>
+      </label>
+    );
+
+    const NumberInput = ({ value, onChange, min = 1, max = 60 }) => (
+      <input
+        type="number"
+        className="w-20 rounded-lg border border-white/10 bg-neutral-900/70 px-3 py-2 text-neutral-100 focus:outline-none focus:ring-2 focus:ring-white/20"
+        value={value}
+        min={min}
+        max={max}
+        step={1}
+        onChange={(e) => onChange(Math.max(min, Math.min(max, parseInt(e.target.value || "0", 10))))}
+      />
+    );
+
+    // -------------------- Logic helpers --------------------
+    const ensureDay = (state, key) => {
+      if (!state.days[key]) state.days[key] = { stretch: false, meditate: false, note: "" };
+      return state.days[key];
+    };
+    const isComplete = (state, key) => {
+      const o = state.days[key];
+      return !!(o && o.stretch && o.meditate);
+    };
+    const countForDay = (state, key) => {
+      const o = state.days[key];
+      if (!o) return 0;
+      return (o.stretch ? 1 : 0) + (o.meditate ? 1 : 0);
+    };
+    const currentStreak = (state) => {
+      let d = today();
+      let c = 0;
+      while (true) {
+        const key = fmtISO(d);
+        if (isComplete(state, key)) {
+          c += 1;
+          d = addDays(d, -1);
+        } else break;
+      }
+      return c;
+    };
+    const bestStreak = (state) => {
+      const keys = Object.keys(state.days).sort();
+      if (!keys.length) return 0;
+      let best = 0, cur = 0, prev = null;
+      for (const k of keys) {
+        if (!isComplete(state, k)) {
+          cur = 0;
+          prev = null;
+          continue;
+        }
+        const prevNextISO = fmtISO(addDays(new Date(k + "T00:00:00"), -1));
+        if (prev && prev === prevNextISO) cur += 1; else cur = 1;
+        if (cur > best) best = cur;
+        prev = k;
+      }
+      return best;
+    };
+    const pctRange = (state, start, end) => {
+      const total = Math.floor((end - start) / 86400000) + 1;
+      let done = 0;
+      let d = zero(start);
+      for (let i = 0; i < total; i++) {
+        if (isComplete(state, fmtISO(d))) done += 1;
+        d = addDays(d, 1);
+      }
+      return Math.round((done / total) * 100);
+    };
+
+    // -------------------- Timers --------------------
+    function useCountdown(initialSeconds) {
+      const [remain, setRemain] = useState(0);
+      const [running, setRunning] = useState(false);
+      const ref = useRef(null);
+
+      const start = (secs) => {
+        setRemain(secs);
+        setRunning(true);
+      };
+      const stop = () => {
+        setRunning(false);
+        setRemain(0);
+      };
+
+      useEffect(() => {
+        if (!running) return;
+        ref.current = setInterval(() => setRemain((r) => (r <= 1 ? 0 : r - 1)), 1000);
+        return () => clearInterval(ref.current);
+      }, [running]);
+
+      useEffect(() => {
+        if (running && remain === 0) setRunning(false);
+      }, [remain, running]);
+
+      const label = useMemo(() => {
+        if (!running) return "Start";
+        const m = Math.floor(remain / 60);
+        const s = remain % 60;
+        return `${m}:${String(s).padStart(2, "0")}`;
+      }, [running, remain]);
+
+      return { remain, running, start: (s = initialSeconds) => start(s), stop, label };
+    }
+
+    // -------------------- Component --------------------
+    function MorningTracker() {
+      const [state, setState] = useState(load);
+      const [selectedISO, setSelectedISO] = useState(fmtISO(today()));
+      const selectedDate = useMemo(() => new Date(selectedISO + "T00:00:00"), [selectedISO]);
+
+      // Save side effect
+      useEffect(() => save(state), [state]);
+
+      // Derived
+      const day = ensureDay(state, selectedISO);
+      const weekPct = useMemo(() => {
+        const [ws, we] = getWeekBoundaries(today());
+        return pctRange(state, ws, we);
+      }, [state]);
+      const monthPct = useMemo(() => {
+        const [ms, me] = getMonthBoundaries(today());
+        return pctRange(state, ms, me);
+      }, [state]);
+      const curStreak = useMemo(() => currentStreak(state), [state]);
+      const best = useMemo(() => bestStreak(state), [state]);
+
+      // Timers
+      const stretchTimer = useCountdown(state.settings.stretchMin * 60);
+      const medTimer = useCountdown(state.settings.medMin * 60);
+
+      // Actions
+      const persistDay = (patch) => {
+        setState((prev) => {
+          const next = { ...prev, days: { ...prev.days } };
+          const d = ensureDay(next, selectedISO);
+          Object.assign(d, patch);
+          return next;
+        });
+      };
+
+      const setSetting = (key, val) => setState((prev) => ({ ...prev, settings: { ...prev.settings, [key]: val } }));
+
+      const exportJSON = () => {
+        const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "morning_stretch_meditation_backup.json";
+        a.click();
+        URL.revokeObjectURL(url);
+      };
+
+      const importJSON = async (file) => {
+        const txt = await file.text();
+        try {
+          const data = JSON.parse(txt);
+          if (!data || typeof data !== "object" || !data.days) return;
+          setState({ days: data.days || {}, settings: { stretchMin: 10, medMin: 10, ...(data.settings || {}) } });
+        } catch {}
+      };
+
+      const resetAll = () => setState(defaultState());
+
+      // Heatmap data: last 42 days
+      const heat = useMemo(() => {
+        const end = today();
+        const start = addDays(end, -41);
+        const arr = [];
+        let d = start;
+        while (d <= end) {
+          const k = fmtISO(d);
+          arr.push({ iso: k, count: countForDay(state, k) });
+          d = addDays(d, 1);
+        }
+        return arr;
+      }, [state]);
+
+      return (
+        <div className="min-h-screen bg-[radial-gradient(circle_at_20%_0%,#0f1117_0%,#0b0d12_40%,#0a0b0f_100%)] p-6 text-neutral-100">
+          <div className="mx-auto grid max-w-5xl gap-4">
+            {/* Header */}
+            <div className="flex items-center justify-between gap-4 rounded-3xl border border-white/10 bg-neutral-900/40 px-5 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] backdrop-blur">
+              <div>
+                <div className="text-xs uppercase tracking-widest text-neutral-400">TR1GOS • Morning System</div>
+                <h1 className="text-2xl font-semibold tracking-tight">Morning Stretching + Meditation</h1>
+                <div className="text-[11px] text-neutral-400">Private, single-file tracker with local persistence</div>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <button className="rounded-xl border border-white/10 bg-neutral-900/60 px-3 py-2 text-sm hover:bg-neutral-800/70" onClick={() => setSelectedISO(fmtISO(today()))}>Today</button>
+                <input type="date" value={selectedISO} onChange={(e) => setSelectedISO(e.target.value)} className="rounded-xl border border-white/10 bg-neutral-900/60 px-3 py-2 text-sm" />
+                <button className="rounded-xl border border-white/10 bg-neutral-900/60 px-3 py-2 text-sm hover:bg-neutral-800/70" onClick={() => persistDay({ stretch: !(day.stretch && day.meditate), meditate: !(day.stretch && day.meditate) })}>Toggle Both</button>
+                <button className="rounded-xl border border-white/10 bg-neutral-900/60 px-3 py-2 text-sm hover:bg-neutral-800/70" onClick={() => setState((prev) => { const next = { ...prev, days: { ...prev.days } }; delete next.days[selectedISO]; return next; })}>Clear Day</button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-5">
+              {/* Left: Tasks */}
+              <div className="lg:col-span-3">
+                <Card>
+                  <div className="mb-2 flex flex-wrap items-center gap-2">
+                    <span className="pill rounded-full border border-dashed border-neutral-700 px-3 py-1 text-xs text-neutral-400">Minimal, research-informed routine</span>
+                    <span className="pill rounded-full border border-dashed border-neutral-700 px-3 py-1 text-xs text-neutral-400">Local-only storage</span>
+                    <span className="pill rounded-full border border-dashed border-neutral-700 px-3 py-1 text-xs text-xs text-neutral-400">Single-file app</span>
+                  </div>
+
+                  {/* Stretch */}
+                  <div className="mb-3 flex items-center justify-between rounded-xl border border-white/10 bg-neutral-900/60 p-3">
+                    <div className="flex items-center gap-3">
+                      <Toggle checked={!!day.stretch} onChange={(v) => persistDay({ stretch: v })} label="Stretching" />
+                      <div className="text-xs text-neutral-400">{state.settings.stretchMin} minutes • mobility + breath</div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <NumberInput value={state.settings.stretchMin} onChange={(v) => setSetting("stretchMin", v)} />
+                      <button className="rounded-lg border border-white/10 bg-neutral-900/70 px-3 py-2 hover:bg-neutral-800/80" onClick={() => (stretchTimer.running ? stretchTimer.stop() : stretchTimer.start(state.settings.stretchMin * 60))}>{stretchTimer.label}</button>
+                    </div>
+                  </div>
+
+                  {/* Meditation */}
+                  <div className="mb-3 flex items-center justify-between rounded-xl border border-white/10 bg-neutral-900/60 p-3">
+                    <div className="flex items-center gap-3">
+                      <Toggle checked={!!day.meditate} onChange={(v) => persistDay({ meditate: v })} label="Meditation" />
+                      <div className="text-xs text-neutral-400">{state.settings.medMin} minutes • breath-focused</div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <NumberInput value={state.settings.medMin} onChange={(v) => setSetting("medMin", v)} />
+                      <button className="rounded-lg border border-white/10 bg-neutral-900/70 px-3 py-2 hover:bg-neutral-800/80" onClick={() => (medTimer.running ? medTimer.stop() : medTimer.start(state.settings.medMin * 60))}>{medTimer.label}</button>
+                    </div>
+                  </div>
+
+                  <textarea value={day.note || ""} onChange={(e) => persistDay({ note: e.target.value })} placeholder="Optional note for this day (what worked, distractions, posture cues)…" className="min-h-[100px] w-full rounded-xl border border-white/10 bg-neutral-900/50 p-3 text-sm text-neutral-100 outline-none focus:ring-2 focus:ring-white/20"></textarea>
+
+                  <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
+                    <button className="rounded-xl border border-emerald-900/50 bg-emerald-600/10 px-4 py-2 hover:bg-emerald-600/20" onClick={() => save(state)}>Save</button>
+                    <span className="ml-auto" />
+                    <button className="rounded-xl border border-white/10 bg-neutral-900/60 px-4 py-2 hover:bg-neutral-800/70" onClick={exportJSON}>Export</button>
+                    <label className="cursor-pointer rounded-xl border border-white/10 bg-neutral-900/60 px-4 py-2 hover:bg-neutral-800/70">
+                      Import
+                      <input type="file" accept=".json,application/json" className="hidden" onChange={(e) => e.target.files && e.target.files[0] && importJSON(e.target.files[0])} />
+                    </label>
+                    <button className="rounded-xl border border-white/10 bg-neutral-900/60 px-4 py-2 hover:bg-neutral-800/70" onClick={resetAll}>Reset All</button>
+                  </div>
+                </Card>
+              </div>
+
+              {/* Right: Stats */}
+              <div className="lg:col-span-2">
+                <Card>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="rounded-xl border border-white/10 bg-neutral-900/60 p-3">
+                      <div className="text-xs text-neutral-400">Current Streak</div>
+                      <div className="text-xl font-bold">{curStreak}</div>
+                    </div>
+                    <div className="rounded-xl border border-white/10 bg-neutral-900/60 p-3">
+                      <div className="text-xs text-neutral-400">Best Streak</div>
+                      <div className="text-xl font-bold">{best}</div>
+                    </div>
+                    <div className="rounded-xl border border-white/10 bg-neutral-900/60 p-3">
+                      <div className="text-xs text-neutral-400">This Week</div>
+                      <div className="text-xl font-bold">{weekPct}%</div>
+                    </div>
+                    <div className="rounded-xl border border-white/10 bg-neutral-900/60 p-3">
+                      <div className="text-xs text-neutral-400">This Month</div>
+                      <div className="text-xl font-bold">{monthPct}%</div>
+                    </div>
+                  </div>
+
+                  {/* Milestones */}
+                  <div className="mt-3">
+                    <div className="text-xs text-neutral-400">Milestones</div>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {[7, 14, 30, 60, 90, 180, 365].map((n) => (
+                        <span key={n} className={`rounded-full border px-3 py-1 text-xs ${curStreak >= n ? "border-emerald-900/60 bg-emerald-900/10 text-emerald-200" : "border-white/10 bg-neutral-900/60 text-neutral-300"}`}>{n}-day</span>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Heatmap */}
+                  <div className="mt-3">
+                    <div className="text-xs text-neutral-400">Last 6 Weeks</div>
+                    <div className="mt-2 grid grid-cols-7 gap-1">
+                      {heat.map(({ iso, count }) => (
+                        <div key={iso} title={`${iso} • ${count} of 2 tasks`} className={`aspect-square rounded-md border ${count === 0 ? "border-neutral-800 bg-[#131417]" : count === 1 ? "border-neutral-800 bg-[#232834]" : "border-neutral-800 bg-[#33524c]"}`}></div>
+                      ))}
+                    </div>
+                    <div className="mt-1 text-[11px] text-neutral-500">Intensity: 0 (none) · 1 (one task) · 2 (both tasks)</div>
+                  </div>
+                </Card>
+              </div>
+            </div>
+
+            <div className="pb-6 text-center text-[11px] text-neutral-500">Single-file, private tracker. Tip: add this page to your mobile home screen. Export regularly for backups.</div>
+          </div>
+        </div>
+      );
+    }
+
+    window.MorningTracker = MorningTracker;
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<MorningTracker />);
+  </script>
+</body>
+</html>
