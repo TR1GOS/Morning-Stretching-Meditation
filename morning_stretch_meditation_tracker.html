@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Morning Stretching + Meditation Tracker</title>
+  <style>
+    :root{
+      --bg:#0b0b0c;--muted:#141416;--card:#101113;--ink:#e9e9ea;--ink-dim:#b6b6b9;
+      --ok:#7bf1a8;--mid:#8a8a90;--accent:#cfcfe4;--warn:#ffd280;--bad:#ff9a9a;
+      --ring:#2a2b2e;
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font:14px/1.4 Inter,system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+    .wrap{max-width:980px;margin:0 auto;padding:24px}
+    .header{display:flex;gap:16px;align-items:center;justify-content:space-between;margin-bottom:18px}
+    .title h1{font-size:20px;margin:0 0 2px 0;letter-spacing:.2px}
+    .subtitle{color:var(--ink-dim);font-size:12px}
+    .card{background:linear-gradient(180deg,rgba(255,255,255,.02),transparent 30%),var(--card);border:1px solid var(--ring);border-radius:16px;padding:16px}
+    .grid{display:grid;grid-template-columns:1.2fr .8fr;gap:16px}
+    @media (max-width:860px){.grid{grid-template-columns:1fr;gap:12px}}
+    .controls{display:flex;gap:10px;flex-wrap:wrap}
+    button,.btn{background:#15161a;border:1px solid var(--ring);color:var(--ink);padding:8px 10px;border-radius:10px;cursor:pointer}
+    button:hover{border-color:#3b3c40}
+    .primary{background:#171821;border-color:#2b2c31}
+    .ok{border-color:#2d6b4a}
+    input[type="checkbox"]{transform:scale(1.2);accent-color:#9fe5c0;margin-right:8px}
+    .task-row{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border:1px solid var(--ring);border-radius:12px;background:var(--muted);margin-bottom:10px}
+    .task-left{display:flex;align-items:center;gap:8px}
+    .task-title{font-weight:600}
+    .dur{color:var(--ink-dim);font-size:12px}
+    .note{width:100%;padding:10px;background:var(--muted);color:var(--ink);border:1px solid var(--ring);border-radius:10px;margin-top:8px}
+    .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+    .stat{background:var(--muted);border:1px solid var(--ring);border-radius:12px;padding:10px}
+    .stat .k{font-size:12px;color:var(--ink-dim)}
+    .stat .v{font-size:18px;font-weight:700}
+    .milestones{display:flex;gap:8px;flex-wrap:wrap}
+    .badge{border:1px solid var(--ring);background:var(--muted);padding:8px 10px;border-radius:999px;font-size:12px}
+    .badge.hit{border-color:#2f6d4c;background:#122017;color:#bdf4d4}
+    .heatmap{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+    .cell{aspect-ratio:1/1;border:1px solid var(--ring);border-radius:6px;background:#111214;display:flex;align-items:center;justify-content:center;font-size:10px;color:#777}
+    .c0{background:#131417}
+    .c1{background:#1a1c23}
+    .c2{background:#232834}
+    .c3{background:#2b3841}
+    .c4{background:#33524c}
+    .legend{font-size:11px;color:var(--ink-dim)}
+    .footer{margin-top:16px;color:var(--mid);font-size:11px}
+    .row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+    .row > *{flex:0 0 auto}
+    .grow{flex:1 1 auto}
+    input[type=number]{width:70px;background:var(--muted);color:var(--ink);border:1px solid var(--ring);border-radius:10px;padding:8px}
+    input[type=date]{background:var(--muted);color:var(--ink);border:1px solid var(--ring);border-radius:10px;padding:8px}
+    .pill{border:1px dashed #2a2b30;border-radius:999px;padding:6px 10px;color:#a9a9ad;font-size:12px}
+    a.link{color:#c9d3ff;text-decoration:none;border-bottom:1px dotted #444}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="header">
+      <div class="title">
+        <h1>Morning Stretching + Meditation</h1>
+        <div class="subtitle" id="dateSub"></div>
+      </div>
+      <div class="controls">
+        <button id="todayBtn" class="primary">Today</button>
+        <input type="date" id="datePicker" />
+        <button id="markBoth">Toggle Both</button>
+        <button id="clearDay">Clear Day</button>
+      </div>
+    </div>
+
+    <div class="grid">
+      <div class="card">
+        <div class="row" style="margin-bottom:8px">
+          <div class="pill">Minimal, research-informed routine</div>
+          <div class="pill">Local-only storage</div>
+          <div class="pill">Single-file app</div>
+        </div>
+
+        <div class="task-row">
+          <div class="task-left">
+            <input type="checkbox" id="stretchChk" />
+            <div>
+              <div class="task-title">Stretching</div>
+              <div class="dur"><span id="stretchMinLabel"></span> minutes • mobility + breath</div>
+            </div>
+          </div>
+          <div class="row">
+            <input type="number" id="stretchMin" min="1" max="60" step="1" />
+            <button id="stretchTimer">Start</button>
+          </div>
+        </div>
+
+        <div class="task-row">
+          <div class="task-left">
+            <input type="checkbox" id="meditateChk" />
+            <div>
+              <div class="task-title">Meditation</div>
+              <div class="dur"><span id="medMinLabel"></span> minutes • breath-focused</div>
+            </div>
+          </div>
+          <div class="row">
+            <input type="number" id="medMin" min="1" max="60" step="1" />
+            <button id="medTimer">Start</button>
+          </div>
+        </div>
+
+        <textarea id="note" class="note" placeholder="Optional note for this day (what worked, distractions, posture cues)…"></textarea>
+
+        <div class="row" style="margin-top:10px">
+          <button id="saveBtn" class="ok">Save</button>
+          <span id="saveInfo" class="legend"></span>
+          <span class="grow"></span>
+          <button id="exportBtn">Export</button>
+          <label class="btn">
+            Import
+            <input type="file" id="importFile" accept=".json" style="display:none"/>
+          </label>
+          <button id="resetAll" class="btn">Reset All</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="stats">
+          <div class="stat">
+            <div class="k">Current Streak</div>
+            <div class="v" id="curStreak">0</div>
+          </div>
+          <div class="stat">
+            <div class="k">Best Streak</div>
+            <div class="v" id="bestStreak">0</div>
+          </div>
+          <div class="stat">
+            <div class="k">This Week</div>
+            <div class="v" id="weekPct">0%</div>
+          </div>
+          <div class="stat">
+            <div class="k">This Month</div>
+            <div class="v" id="monthPct">0%</div>
+          </div>
+        </div>
+
+        <div style="margin-top:12px">
+          <div class="legend">Milestones</div>
+          <div class="milestones" id="milestones"></div>
+        </div>
+
+        <div style="margin-top:12px">
+          <div class="legend">Last 6 Weeks</div>
+          <div class="heatmap" id="heatmap"></div>
+          <div class="legend" style="margin-top:6px">Intensity: 0 (none) · 1 (one task) · 2 (both tasks)</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer">
+      Single-file, private tracker. Tip: add this page to your mobile home screen. Export regularly for backups.
+    </div>
+  </div>
+
+  <script>
+    const KEY='msmt_tracker_v1';
+    const el={
+      dateSub:byId('dateSub'),
+      datePicker:byId('datePicker'),
+      todayBtn:byId('todayBtn'),
+      stretchChk:byId('stretchChk'),
+      meditateChk:byId('meditateChk'),
+      stretchMin:byId('stretchMin'),
+      medMin:byId('medMin'),
+      stretchMinLabel:byId('stretchMinLabel'),
+      medMinLabel:byId('medMinLabel'),
+      stretchTimer:byId('stretchTimer'),
+      medTimer:byId('medTimer'),
+      note:byId('note'),
+      saveBtn:byId('saveBtn'),
+      saveInfo:byId('saveInfo'),
+      markBoth:byId('markBoth'),
+      clearDay:byId('clearDay'),
+      exportBtn:byId('exportBtn'),
+      importFile:byId('importFile'),
+      resetAll:byId('resetAll'),
+      curStreak:byId('curStreak'),
+      bestStreak:byId('bestStreak'),
+      weekPct:byId('weekPct'),
+      monthPct:byId('monthPct'),
+      milestones:byId('milestones'),
+      heatmap:byId('heatmap')
+    };
+
+    function byId(id){return document.getElementById(id)}
+    function fmtDate(d){return d.toISOString().slice(0,10)}
+    function today(){const d=new Date(); d.setHours(0,0,0,0); return d}
+    function addDays(d,delta){const x=new Date(d); x.setDate(x.getDate()+delta); return x}
+    function getWeekBoundaries(d){const x=new Date(d); const day=(x.getDay()+6)%7; const monday=addDays(x,-day); const sunday=addDays(monday,6); return [monday,sunday]}
+    function daysInMonth(d){return new Date(d.getFullYear(), d.getMonth()+1, 0).getDate()}
+    function getMonthBoundaries(d){const start=new Date(d.getFullYear(), d.getMonth(),1); const end=new Date(d.getFullYear(), d.getMonth(), daysInMonth(d)); return [start,end]}
+
+    const defaultState=()=>({days:{},settings:{stretchMin:10, medMin:10}});
+
+    function load(){
+      try{
+        const raw=localStorage.getItem(KEY);
+        return raw? JSON.parse(raw): defaultState();
+      }catch(e){
+        return defaultState();
+      }
+    }
+
+    function save(state){
+      localStorage.setItem(KEY, JSON.stringify(state));
+      el.saveInfo.textContent='Saved '+new Date().toLocaleTimeString();
+      setTimeout(()=>el.saveInfo.textContent='',2500);
+    }
+
+    let state=load();
+    let selectedDate=today();
+
+    function init(){
+      // date picker default to today
+      el.datePicker.value=fmtDate(selectedDate);
+      updateHeader();
+      // settings
+      el.stretchMin.value=state.settings.stretchMin;
+      el.medMin.value=state.settings.medMin;
+      el.stretchMinLabel.textContent=state.settings.stretchMin;
+      el.medMinLabel.textContent=state.settings.medMin;
+      // bind events
+      el.datePicker.addEventListener('change',()=>{
+        selectedDate=new Date(el.datePicker.value+'T00:00:00');
+        loadDayUI();
+        updateHeader();
+      });
+      el.todayBtn.addEventListener('click',()=>{
+        selectedDate=today();
+        el.datePicker.value=fmtDate(selectedDate);
+        loadDayUI();
+        updateHeader();
+      });
+      el.stretchChk.addEventListener('change',persistDay);
+      el.meditateChk.addEventListener('change',persistDay);
+      el.stretchMin.addEventListener('change',()=>{
+        state.settings.stretchMin=Math.max(1,Math.min(60,parseInt(el.stretchMin.value||'10')));
+        el.stretchMin.value=state.settings.stretchMin; el.stretchMinLabel.textContent=state.settings.stretchMin; save(state);
+      });
+      el.medMin.addEventListener('change',()=>{
+        state.settings.medMin=Math.max(1,Math.min(60,parseInt(el.medMin.value||'10')));
+        el.medMin.value=state.settings.medMin; el.medMinLabel.textContent=state.settings.medMin; save(state);
+      });
+      el.note.addEventListener('change',persistDay);
+      el.saveBtn.addEventListener('click',persistDay);
+      el.markBoth.addEventListener('click',()=>{
+        const cur = dayObj(fmtDate(selectedDate));
+        const nextVal = !(cur.stretch && cur.meditate);
+        el.stretchChk.checked=nextVal; el.meditateChk.checked=nextVal; persistDay();
+      });
+      el.clearDay.addEventListener('click',()=>{
+        const k=fmtDate(selectedDate);
+        if(state.days[k]){ delete state.days[k]; save(state); }
+        loadDayUI(); refreshStats();
+      });
+      el.exportBtn.addEventListener('click',doExport);
+      el.importFile.addEventListener('change',doImport);
+      el.resetAll.addEventListener('click',()=>{
+        if(confirm('Reset all data?')){ state=defaultState(); save(state); loadDayUI(); refreshStats(); }
+      });
+      // timers
+      wireTimer(el.stretchTimer, ()=>state.settings.stretchMin*60);
+      wireTimer(el.medTimer, ()=>state.settings.medMin*60);
+      // first UI load
+      loadDayUI();
+      refreshStats();
+    }
+
+    function updateHeader(){
+      const d=selectedDate;
+      const week=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][(d.getDay()+6)%7];
+      el.dateSub.textContent=`${week}, ${d.toLocaleDateString()} • Local time ${new Date().toLocaleTimeString()}`;
+    }
+
+    function dayObj(key){
+      if(!state.days[key]) state.days[key]={stretch:false, meditate:false, note:''};
+      return state.days[key];
+    }
+
+    function loadDayUI(){
+      const key=fmtDate(selectedDate);
+      const o=dayObj(key);
+      el.stretchChk.checked=!!o.stretch;
+      el.meditateChk.checked=!!o.meditate;
+      el.note.value=o.note||'';
+    }
+
+    function persistDay(){
+      const key=fmtDate(selectedDate);
+      const o=dayObj(key);
+      o.stretch=el.stretchChk.checked;
+      o.meditate=el.meditateChk.checked;
+      o.note=el.note.value||'';
+      save(state);
+      refreshStats();
+    }
+
+    function isComplete(key){
+      const o=state.days[key];
+      return o && o.stretch && o.meditate;
+    }
+    function countForDay(key){
+      const o=state.days[key];
+      if(!o) return 0;
+      return (o.stretch?1:0) + (o.meditate?1:0);
+    }
+
+    function currentStreak(){
+      let d=today(); let c=0;
+      while(true){
+        const key=fmtDate(d);
+        if(isComplete(key)){ c++; d=addDays(d,-1); } else break;
+      }
+      return c;
+    }
+    function bestStreak(){
+      // scan all days and compute longest consecutive complete sequence
+      const keys=Object.keys(state.days).sort(); // ascending
+      if(keys.length===0) return 0;
+      let best=0, cur=0, prev=null;
+      for(const k of keys){
+        if(!isComplete(k)) { cur=0; prev=null; continue; }
+        if(prev && addDays(new Date(prev+'T00:00:00'),1).toISOString().slice(0,10)===k){
+          cur++;
+        }else{
+          cur=1;
+        }
+        if(cur>best) best=cur;
+        prev=k;
+      }
+      return best;
+    }
+
+    function pctRange(start,end){
+      // percent of days complete between start..end inclusive
+      const total = Math.floor((end - start)/(1000*60*60*24))+1;
+      let done=0;
+      let d=new Date(start);
+      d.setHours(0,0,0,0);
+      for(let i=0;i<total;i++){
+        if(isComplete(fmtDate(d))) done++;
+        d=addDays(d,1);
+      }
+      return Math.round((done/total)*100);
+    }
+
+    function refreshStats(){
+      el.curStreak.textContent=currentStreak();
+      el.bestStreak.textContent=bestStreak();
+      // week/month
+      const [wStart,wEnd]=getWeekBoundaries(today());
+      el.weekPct.textContent=pctRange(wStart,wEnd)+'%';
+      const [mStart,mEnd]=getMonthBoundaries(today());
+      el.monthPct.textContent=pctRange(mStart,mEnd)+'%';
+      // milestones
+      renderMilestones();
+      // heatmap
+      renderHeatmap();
+    }
+
+    function renderMilestones(){
+      const container=el.milestones; container.innerHTML='';
+      const ms=[7,14,30,60,90,180,365];
+      const cur=currentStreak();
+      for(const n of ms){
+        const span=document.createElement('div');
+        span.className='badge'+(cur>=n?' hit':'');
+        span.textContent=`${n}-day`;
+        container.appendChild(span);
+      }
+    }
+
+    function renderHeatmap(){
+      const container=el.heatmap; container.innerHTML='';
+      const end=today();
+      const start=addDays(end,-41); // 6 weeks approx (42 days)
+      let d=new Date(start);
+      while(d<=end){
+        const c=countForDay(fmtDate(d));
+        const cell=document.createElement('div');
+        cell.className='cell c'+Math.min(4,c*2); // 0,2,4 mapping for visual steps
+        cell.title=`${d.toDateString()} • ${c} of 2 tasks`;
+        container.appendChild(cell);
+        d=addDays(d,1);
+      }
+    }
+
+    function wireTimer(button, secondsFn){
+      let timer=null, remain=0;
+      const original=button.textContent;
+      function tick(){
+        if(remain<=0){ clearInterval(timer); timer=null; button.textContent=original; button.disabled=false; return; }
+        remain--;
+        const m=Math.floor(remain/60), s=remain%60;
+        button.textContent=(m+':'+String(s).padStart(2,'0'));
+      }
+      button.addEventListener('click',()=>{
+        if(timer){ clearInterval(timer); timer=null; button.textContent=original; button.disabled=false; return; }
+        remain=secondsFn();
+        button.disabled=true;
+        tick();
+        timer=setInterval(tick,1000);
+      });
+    }
+
+    function doExport(){
+      const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'});
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement('a');
+      a.href=url; a.download='morning_stretch_meditation_backup.json';
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(()=>URL.revokeObjectURL(url),5000);
+    }
+
+    function doImport(ev){
+      const file=ev.target.files[0];
+      if(!file) return;
+      const reader=new FileReader();
+      reader.onload=()=>{
+        try{
+          const data=JSON.parse(reader.result);
+          if(!data || typeof data!=='object' || !data.days) throw new Error('Invalid file');
+          state=data; save(state); loadDayUI(); refreshStats();
+          alert('Imported successfully.');
+        }catch(e){
+          alert('Import failed. File invalid.');
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    // boot
+    init();
+  </script>
+</body>
+</html>
