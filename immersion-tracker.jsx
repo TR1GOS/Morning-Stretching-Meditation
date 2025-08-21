@@ -485,3 +485,5 @@ function runTests() {
 
   return results;
 }
+window.ImmersionTracker = ImmersionTracker;
+
