@@ -1,1 +1,39 @@
-html <!DOCTYPE html> <html lang="en" class="h-full bg-neutral-950"> <head> <meta charset="UTF-8" /> <meta name="viewport" content="width=device-width, initial-scale=1" /> <title>TR1GOS Trackers</title> <script src="https://cdn.tailwindcss.com"></script> <!-- React 18 UMD --> <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script> <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script> <!-- Babel (compile JSX in browser) --> <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script> <!-- Load your components via Babel; expose globals (see step 2) --> <script type="text/babel" data-presets="env,react" src="./ImmersionTracker.jsx"></script> <script type="text/babel" data-presets="env,react" src="./MorningTracker.jsx"></script> </head> <body class="min-h-full text-neutral-100 bg-[radial-gradient(circle_at_20%_0%,#0f1117_0%,#0b0d12_40%,#0a0b0f_100%)]"> <div id="root"></div> <!-- Hub (inline JSX) --> <script type="text/babel" data-presets="env,react"> function Hub(){ const [page,setPage]=React.useState("hub"); if(page==="immersion"){ return ( <div className="min-h-screen"> <button onClick={()=>setPage("hub")} className="m-4 px-3 py-2 rounded-xl bg-neutral-900/60 border border-white/10 hover:bg-neutral-800/70 text-sm">← Back</button> {React.createElement(window.ImmersionTracker)} </div> ); } if(page==="morning"){ return ( <div className="min-h-screen"> <button onClick={()=>setPage("hub")} className="m-4 px-3 py-2 rounded-xl bg-neutral-900/60 border border-white/10 hover:bg-neutral-800/70 text-sm">← Back</button> {React.createElement(window.MorningTracker)} </div> ); } return ( <div className="max-w-3xl mx-auto p-8 space-y-8"> <header className="text-center space-y-2"> <h1 className="text-3xl font-semibold tracking-tight">TR1GOS Trackers</h1> <p className="text-sm text-neutral-400">Minimal monochrome system hub</p> </header> <main> <ul className="grid gap-4"> <li> <button onClick={()=>setPage("morning")} className="w-full text-left block rounded-2xl border border-white/10 bg-neutral-900/50 backdrop-blur px-6 py-4 hover:bg-neutral-800/60 transition-colors shadow-[0_0_0_1px_rgba(255,255,255,0.04)]"> <div className="flex items-center justify-between"> <span className="font-medium text-lg">Morning Stretch + Meditation Tracker</span> <span className="text-neutral-400 text-sm">→</span> </div> <p className="text-xs text-neutral-400 mt-1">Daily balance & mindfulness log</p> </button> </li> <li> <button onClick={()=>setPage("immersion")} className="w-full text-left block rounded-2xl border border-white/10 bg-neutral-900/50 backdrop-blur px-6 py-4 hover:bg-neutral-800/60 transition-colors shadow-[0_0_0_1px_rgba(255,255,255,0.04)]"> <div className="flex items-center justify-between"> <span className="font-medium text-lg">Immersion Tracker</span> <span className="text-neutral-400 text-sm">→</span> </div> <p className="text-xs text-neutral-400 mt-1">Japanese × Spanish streak system</p> </button> </li> </ul> </main> <footer className="text-center text-[11px] text-neutral-500"> Built with a monochrome design system · TR1GOS </footer> </div> ); } const root = ReactDOM.createRoot(document.getElementById("root")); root.render(<Hub/>); </script> </body> </html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>My Projects</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #0f1117;
+      color: #eee;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+    }
+    h1 { margin-bottom: 2rem; }
+    a {
+      display: block;
+      padding: 1rem 2rem;
+      margin: 0.5rem;
+      border: 1px solid #444;
+      border-radius: 8px;
+      color: #eee;
+      text-decoration: none;
+      background: #1a1d25;
+      transition: background 0.2s;
+    }
+    a:hover { background: #2a2d35; }
+  </style>
+</head>
+<body>
+  <h1>My Pages</h1>
+  <a href="immersion.html">Immersion Tracker</a>
+  <a href="morning-meditation.html">Morning Meditation</a>
+</body>
+</html>
