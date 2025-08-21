@@ -359,3 +359,5 @@ export default function MorningTracker() {
     </div>
   );
 }
+window.MorningTracker = MorningTracker;
+
